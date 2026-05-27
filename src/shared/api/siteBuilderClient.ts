@@ -14,12 +14,17 @@ export async function readApiError(response: Response, fallback: string): Promis
   return fallback;
 }
 
-export async function siteBuilderGet<TResponse>(path: string): Promise<TResponse> {
+async function siteBuilderRequest<TResponse>(
+  path: string,
+  options: RequestInit
+): Promise<TResponse> {
   const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
-    method: "GET",
+    ...options,
     headers: {
       Accept: "application/json",
-      "X-Site-Builder-Client": appConfig.siteBuilderClient
+      "Content-Type": "application/json",
+      "X-Site-Builder-Client": appConfig.siteBuilderClient,
+      ...options.headers
     }
   });
 
@@ -28,4 +33,20 @@ export async function siteBuilderGet<TResponse>(path: string): Promise<TResponse
   }
 
   return (await response.json()) as TResponse;
+}
+
+export function siteBuilderGet<TResponse>(path: string): Promise<TResponse> {
+  return siteBuilderRequest<TResponse>(path, {
+    method: "GET"
+  });
+}
+
+export function siteBuilderPatch<TResponse, TBody extends object>(
+  path: string,
+  body: TBody
+): Promise<TResponse> {
+  return siteBuilderRequest<TResponse>(path, {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
 }
