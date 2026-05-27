@@ -505,3 +505,73 @@ a {
   padding: 10px 14px;
   white-space: nowrap;
 }
+
+.sb-template-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sb-template-tab-button {
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  color: #334155;
+  cursor: pointer;
+  display: grid;
+  font-weight: 900;
+  gap: 4px;
+  padding: 10px 14px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.sb-template-tab-button small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sb-template-tab-button-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.sb-template-tab-button-active small {
+  color: #cbd5e1;
+}
+
+.sb-template-empty-state {
+  max-width: 760px;
+}
+
+.sb-template-region-toggle {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.sb-template-region-toggle h3,
+.sb-template-region-toggle p {
+  margin-top: 0;
+}
+
+.sb-template-region-actions {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 8px;
+}
