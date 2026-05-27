@@ -1,17 +1,21 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
+import type { SiteBuilderNavigationResponse } from "../../features/siteBuilder/model/navigationModel";
 import { appConfig } from "../../shared/config/appConfig";
 
-export function AppLayout() {
+import { SiteBuilderSidebar } from "./SiteBuilderSidebar";
+
+type AppLayoutProps = {
+  navigation: SiteBuilderNavigationResponse | null;
+  isLoading: boolean;
+  error: string | null;
+};
+
+export function AppLayout({ navigation, isLoading, error }: AppLayoutProps) {
   return (
     <div className="sb-shell">
-      <aside className="sb-sidebar">
-        <strong>D2C Site Builder</strong>
-        <nav>
-          <NavLink to="/">首页</NavLink>
-          <NavLink to="/publish">发布</NavLink>
-        </nav>
-      </aside>
+      <SiteBuilderSidebar navigation={navigation} isLoading={isLoading} error={error} />
+
       <div className="sb-main">
         <header className="sb-topbar">
           <span>{appConfig.appCode}</span>

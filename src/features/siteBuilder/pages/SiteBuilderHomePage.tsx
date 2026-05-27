@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { PageFrame } from "../../../shared/ui/PageFrame";
 import { fetchAdminHealth } from "../api/siteBuilderApi";
 import type { HealthResponse } from "../model/siteBuilderModel";
-import { HealthCard } from "../components/HealthCard";
 
-export function SiteBuilderHomePage() {
+import { HealthCard } from "../components/HealthCard";
+import type { SiteBuilderPageProps } from "./PlaceholderPage";
+
+export function SiteBuilderHomePage({ page }: SiteBuilderPageProps) {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,18 +33,18 @@ export function SiteBuilderHomePage() {
 
   return (
     <PageFrame
-      title="Site Builder 首页"
-      description="第一刀只建立独立建站服务工程骨架，不迁移页面装修业务。"
+      title={page.title}
+      description="Site Builder 是 D2C 内部购物网站搭建控制台，页面目录由后端注册驱动。"
     >
-      {error ? <section className="sb-card sb-error">加载失败：{error}</section> : null}
+      {error ? <section className="sb-card sb-error">服务状态加载失败：{error}</section> : null}
       <HealthCard health={health} />
+
       <section className="sb-card">
-        <h2>第一刀范围</h2>
+        <h2>当前阶段</h2>
         <ul>
-          <li>独立仓库</li>
-          <li>基础 Layout / Router / API Client</li>
-          <li>健康检查</li>
-          <li>Base path 构建检查</li>
+          <li>后端页面注册与动态导航</li>
+          <li>PC Web 页面体系规划</li>
+          <li>首页搭建入口</li>
         </ul>
       </section>
     </PageFrame>
