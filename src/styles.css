@@ -418,3 +418,160 @@ a {
   gap: 12px;
   padding: 12px;
 }
+
+.sb-template-catalog {
+  display: grid;
+  gap: 18px;
+}
+
+.sb-template-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 0.05);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.sb-template-card h2,
+.sb-template-card h3,
+.sb-template-card p {
+  margin-top: 0;
+}
+
+.sb-template-card-header,
+.sb-template-region-header,
+.sb-template-slot {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.sb-template-card-header p,
+.sb-template-region-header p,
+.sb-template-slot p {
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.sb-template-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sb-template-meta span {
+  background: #f1f5f9;
+  border-radius: 999px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+
+.sb-template-regions {
+  display: grid;
+  gap: 12px;
+}
+
+.sb-template-region {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.sb-template-slots {
+  display: grid;
+  gap: 8px;
+}
+
+.sb-template-slot {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.sb-primary-link {
+  background: #0f172a;
+  border-radius: 12px;
+  color: #ffffff;
+  font-weight: 900;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.sb-template-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.sb-template-tab-button {
+  align-items: flex-start;
+  background: #f8fafc;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  color: #334155;
+  cursor: pointer;
+  display: grid;
+  font-weight: 900;
+  gap: 4px;
+  padding: 10px 14px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.sb-template-tab-button small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sb-template-tab-button-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.sb-template-tab-button-active small {
+  color: #cbd5e1;
+}
+
+.sb-template-empty-state {
+  max-width: 760px;
+}
+
+.sb-template-region-toggle {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.sb-template-region-toggle h3,
+.sb-template-region-toggle p {
+  margin-top: 0;
+}
+
+.sb-template-region-actions {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 8px;
+}
