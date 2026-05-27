@@ -1,0 +1,42 @@
+name: Frontend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check
+        run: pnpm check
+
+      - name: Gateway base path build
+        run: VITE_APP_BASE_PATH=/site-builder/ VITE_API_BASE_URL=/api/site-builder pnpm build
+
+      - name: Check dist base path
+        run: |
+          if grep -R 'src="/assets/\|href="/assets/' dist; then
+            echo "FOUND_BAD_ROOT_ASSET_REFERENCE"
+            false
+          fi
+          grep -R 'src="/site-builder/assets/\|href="/site-builder/assets/' dist
