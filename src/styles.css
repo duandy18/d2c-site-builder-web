@@ -2098,3 +2098,92 @@ a {
 }
 /* publish-action page end */
 
+
+/* offer-resolve product-grid form start */
+.sb-offer-resolver {
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 18px;
+  background: rgba(8, 47, 73, 0.42);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.sb-offer-resolver-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sb-offer-resolver-header div {
+  display: grid;
+  gap: 5px;
+}
+
+.sb-offer-resolver-header strong {
+  color: #e0f2fe;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.sb-offer-resolver-header span,
+.sb-offer-resolver-header em {
+  color: #bae6fd;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.sb-offer-resolver-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sb-offer-resolver-row button {
+  border: 0;
+  border-radius: 14px;
+  background: #0ea5e9;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 950;
+  padding: 0 16px;
+}
+
+.sb-offer-resolver-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sb-offer-resolver-notice {
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 10px 12px;
+}
+
+.sb-offer-resolver-success {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.sb-offer-resolver-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+@media (max-width: 720px) {
+  .sb-offer-resolver-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sb-offer-resolver-row button {
+    min-height: 42px;
+  }
+}
+/* offer-resolve product-grid form end */
+

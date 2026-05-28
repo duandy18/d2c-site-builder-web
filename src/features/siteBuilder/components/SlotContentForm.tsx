@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { resolveOfferForProductGrid } from "../api/offerResolveApi";
+import type { ResolvedOffer } from "../model/offerResolveModel";
 import type {
   JsonRecord,
   PageContentSlot,
@@ -18,6 +20,14 @@ import {
   validateRequiredValues
 } from "./schemaForm/schemaFormModel";
 
+const PRODUCT_GRID_SLOT_CODE = "product_grid.list";
+
+type OfferResolveState =
+  | { status: "idle" }
+  | { status: "resolving" }
+  | { status: "success"; message: string }
+  | { status: "error"; error: string };
+
 function JsonReadonlyBlock({ title, value }: { title: string; value: JsonRecord }) {
   return (
     <div className="sb-json-preview">
@@ -33,6 +43,181 @@ function SchemaSummaryBlock({ title, schema }: { title: string; schema: SlotSche
       <span>{title}</span>
       <strong>{schemaSummary(schema)}</strong>
     </div>
+  );
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return "";
+}
+
+function parseProductsDraft(value: unknown): JsonRecord[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is JsonRecord => isRecord(item));
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  if (value.trim().length === 0) {
+    return [];
+  }
+
+  const parsed = JSON.parse(value) as unknown;
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("products 必须是数组 JSON，才能自动回填商品。");
+  }
+
+  return parsed.filter((item): item is JsonRecord => isRecord(item));
+}
+
+function safeProductCount(value: unknown): string {
+  try {
+    return `当前 products：${parseProductsDraft(value).length} 个商品`;
+  } catch {
+    return "当前 products 不是合法数组 JSON";
+  }
+}
+
+function offerToProduct(offer: ResolvedOffer): JsonRecord {
+  const product: JsonRecord = {
+    offer_code: offer.offer_code,
+    title: offer.title,
+    category: offer.category,
+    sale_price: offer.display_price
+  };
+
+  if (offer.image_url) {
+    product.image = {
+      url: offer.image_url,
+      alt: offer.title
+    };
+  }
+
+  return product;
+}
+
+function upsertProduct(products: JsonRecord[], product: JsonRecord): JsonRecord[] {
+  const offerCode = stringValue(product.offer_code);
+  const nextProducts = [...products];
+  const existingIndex = nextProducts.findIndex(
+    (item) => stringValue(item.offer_code) === offerCode
+  );
+
+  if (existingIndex >= 0) {
+    nextProducts[existingIndex] = {
+      ...nextProducts[existingIndex],
+      ...product
+    };
+    return nextProducts;
+  }
+
+  return [...nextProducts, product];
+}
+
+function ProductGridOfferResolver({
+  contentDraft,
+  disabled,
+  onChange
+}: {
+  contentDraft: JsonRecord;
+  disabled: boolean;
+  onChange: (nextValue: JsonRecord) => void;
+}) {
+  const [offerCode, setOfferCode] = useState("");
+  const [state, setState] = useState<OfferResolveState>({ status: "idle" });
+
+  async function handleResolve() {
+    const normalizedOfferCode = offerCode.trim();
+
+    if (!normalizedOfferCode) {
+      setState({ status: "error", error: "请先输入 offer_code。" });
+      return;
+    }
+
+    setState({ status: "resolving" });
+
+    try {
+      const response = await resolveOfferForProductGrid(normalizedOfferCode);
+      const products = parseProductsDraft(contentDraft.products);
+      const nextProducts = upsertProduct(products, offerToProduct(response.offer));
+      const currentSource = stringValue(contentDraft.source).trim();
+
+      onChange({
+        ...contentDraft,
+        source: currentSource.length > 0 ? currentSource : "全部商品",
+        products: prettyJson(nextProducts)
+      });
+
+      setState({
+        status: "success",
+        message: `已回填：${response.offer.title} / ${response.offer.display_price}`
+      });
+    } catch (err: unknown) {
+      setState({
+        status: "error",
+        error: err instanceof Error ? err.message : "offer 解析失败"
+      });
+    }
+  }
+
+  return (
+    <section className="sb-offer-resolver">
+      <div className="sb-offer-resolver-header">
+        <div>
+          <strong>商品 Offer 解析</strong>
+          <span>
+            输入 D2C published Offer 的 offer_code，自动回填商品标题、分类、真实价格和图片。
+          </span>
+          <em>{safeProductCount(contentDraft.products)}</em>
+        </div>
+      </div>
+
+      <div className="sb-offer-resolver-row">
+        <input
+          className="sb-schema-input"
+          type="text"
+          value={offerCode}
+          placeholder="例如：offer.cat_litter.tofu_6l"
+          disabled={disabled || state.status === "resolving"}
+          onChange={(event) => setOfferCode(event.target.value)}
+        />
+        <button
+          type="button"
+          disabled={disabled || state.status === "resolving"}
+          onClick={() => {
+            void handleResolve();
+          }}
+        >
+          {state.status === "resolving" ? "解析中..." : "解析并回填"}
+        </button>
+      </div>
+
+      {state.status === "success" ? (
+        <div className="sb-offer-resolver-notice sb-offer-resolver-success">
+          {state.message}
+        </div>
+      ) : null}
+
+      {state.status === "error" ? (
+        <div className="sb-offer-resolver-notice sb-offer-resolver-error">
+          {state.error}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -119,6 +304,14 @@ export function SlotContentForm({
   return (
     <form className="sb-slot-form" onSubmit={handleSubmit}>
       {error ? <div className="sb-form-error">{error}</div> : null}
+
+      {slot.slot_code === PRODUCT_GRID_SLOT_CODE ? (
+        <ProductGridOfferResolver
+          contentDraft={contentDraft}
+          disabled={disabled}
+          onChange={setContentDraft}
+        />
+      ) : null}
 
       <SchemaDrivenForm
         title="内容表单"
