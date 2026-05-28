@@ -1,22 +1,17 @@
 export type JsonRecord = Record<string, unknown>;
 
-export type OptionItem = {
-  value: string;
-  label: string;
-  description: string;
+export type SchemaField = {
+  required?: boolean;
+  type?: string;
+  label?: string;
+  default?: unknown;
+  options?: unknown[];
+  [key: string]: unknown;
 };
 
-export type ContentField = {
-  field_key: string;
-  label: string;
-  field_type: string;
-  value_type: string;
-  editor_type: string;
-  required: boolean;
-  placeholder: string | null;
-  help_text: string | null;
-  options: OptionItem[];
-  item_fields: ContentField[];
+export type SlotSchema = {
+  fields?: Record<string, SchemaField>;
+  [key: string]: unknown;
 };
 
 export type PageContentSlot = {
@@ -28,10 +23,15 @@ export type PageContentSlot = {
   required: boolean;
   default_block_name: string;
   sort_order: number;
-  content_fields: ContentField[];
+  content_schema: SlotSchema;
+  presentation_schema: SlotSchema;
+  default_content: JsonRecord;
+  default_presentation: JsonRecord;
+  validation: JsonRecord;
   block_code: string | null;
   status: string | null;
   content: JsonRecord;
+  presentation: JsonRecord;
 };
 
 export type PageContentRegionGroup = {
@@ -56,6 +56,7 @@ export type PageContentFormResponse = {
 
 export type UpdateSlotContentRequest = {
   content: JsonRecord;
+  presentation: JsonRecord;
 };
 
 export type SlotContentResponse = {
@@ -64,6 +65,7 @@ export type SlotContentResponse = {
   block_type: string;
   renderer_key: string;
   content: JsonRecord;
+  presentation: JsonRecord;
   status: string;
 };
 

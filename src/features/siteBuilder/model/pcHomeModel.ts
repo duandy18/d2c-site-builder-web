@@ -1,11 +1,10 @@
 export type {
-  ContentField,
   JsonRecord,
-  OptionItem,
   PageContentFormResponse,
   PageContentRegionGroup,
   PageContentSlot,
   SlotContentResponse,
+  SlotSchema,
   TemplateContentTarget,
   UpdateSlotContentRequest
 } from "./templateContentModel";

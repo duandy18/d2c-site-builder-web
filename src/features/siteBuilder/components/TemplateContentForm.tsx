@@ -1,7 +1,7 @@
 import type {
-  JsonRecord,
   PageContentFormResponse,
-  PageContentSlot
+  PageContentSlot,
+  UpdateSlotContentRequest
 } from "../model/templateContentModel";
 
 import { SlotContentForm } from "./SlotContentForm";
@@ -30,7 +30,7 @@ export function TemplateContentForm({
 }: {
   form: PageContentFormResponse;
   disabled: boolean;
-  onSaveSlot: (slotCode: string, content: JsonRecord) => Promise<void>;
+  onSaveSlot: (slotCode: string, request: UpdateSlotContentRequest) => Promise<void>;
   onSaved: (message: string) => void;
 }) {
   return (
@@ -40,7 +40,9 @@ export function TemplateContentForm({
           <div className="sb-content-group-header">
             <div>
               <h2>{group.label}</h2>
-              <p>{group.description}</p>
+              <p>
+                {group.template_region_code} · {group.description}
+              </p>
             </div>
             <span className="sb-pill">{group.required ? "必填区域" : "可选区域"}</span>
           </div>
@@ -50,7 +52,7 @@ export function TemplateContentForm({
               <article
                 key={`${slot.slot_code}:${slot.block_code ?? "empty"}:${JSON.stringify(
                   slot.content
-                )}`}
+                )}:${JSON.stringify(slot.presentation)}`}
                 className="sb-slot-card"
               >
                 <div className="sb-slot-card-header">

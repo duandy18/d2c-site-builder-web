@@ -7,6 +7,7 @@ import type {
   TemplateCatalogResponse,
   TemplateCatalogSlot
 } from "../model/templateCatalogModel";
+import type { SlotSchema } from "../model/templateContentModel";
 import { PageFrame } from "../../../shared/ui/PageFrame";
 
 import type { SiteBuilderPageProps } from "./PlaceholderPage";
@@ -52,10 +53,8 @@ const SURFACE_TABS: SurfaceTab[] = [
 
 const TEMPLATE_ORDER_BY_PAGE_CODE: Record<string, number> = {
   home: 10,
-  category_entry: 20,
-  product_list: 30,
-  campaign: 40,
-  content_page: 50
+  product_detail_gallery: 20,
+  product_detail_image_matrix: 30
 };
 
 function surfaceByPath(pathname: string): SurfaceTab {
@@ -65,7 +64,6 @@ function surfaceByPath(pathname: string): SurfaceTab {
   );
 }
 
-
 function pageLabel(template: TemplateCatalogItem): string {
   return `${template.page_title} · ${template.template_key}`;
 }
@@ -74,12 +72,21 @@ function requiredText(required: boolean): string {
   return required ? "必填" : "可选";
 }
 
-function summarizeSlot(slot: TemplateCatalogSlot): string {
-  const fieldTypes = Array.from(
-    new Set(slot.content_fields.map((field) => field.value_type))
-  );
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
-  return fieldTypes.length > 0 ? fieldTypes.join(" / ") : "无字段";
+function schemaFieldNames(schema: SlotSchema): string[] {
+  const fields = schema.fields;
+
+  return isRecord(fields) ? Object.keys(fields) : [];
+}
+
+function summarizeSlot(slot: TemplateCatalogSlot): string {
+  const contentFields = schemaFieldNames(slot.content_schema);
+  const presentationFields = schemaFieldNames(slot.presentation_schema);
+
+  return `内容字段 ${contentFields.length} 个 / 表现字段 ${presentationFields.length} 个`;
 }
 
 function sortTemplates(templates: TemplateCatalogItem[]): TemplateCatalogItem[] {
@@ -194,7 +201,7 @@ export function TemplateCatalogPage({ page }: SiteBuilderPageProps) {
   return (
     <PageFrame
       title={page.title}
-      description="查看各终端页面模板、区域、Slot 和字段合同，并进入对应页面填写内容。"
+      description="查看各终端页面模板、区域、Slot、内容 Schema 和表现 Schema，并进入对应页面填写内容。"
     >
       {state.status === "loading" ? (
         <section className="sb-card">正在加载模板目录...</section>
@@ -206,7 +213,6 @@ export function TemplateCatalogPage({ page }: SiteBuilderPageProps) {
 
       {state.status === "ok" ? (
         <>
-
           {activeSurface.status === "planned" ? (
             <section className="sb-card">
               <div className="sb-template-empty-state">
@@ -305,7 +311,7 @@ export function TemplateCatalogPage({ page }: SiteBuilderPageProps) {
                                     <p>
                                       {slot.slot_code} · {slot.renderer_key}
                                     </p>
-                                    <p>字段类型：{summarizeSlot(slot)}</p>
+                                    <p>{summarizeSlot(slot)}</p>
                                   </div>
                                   <span className="sb-pill">
                                     {requiredText(slot.required)}

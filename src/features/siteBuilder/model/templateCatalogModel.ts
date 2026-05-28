@@ -1,4 +1,4 @@
-import type { ContentField } from "./templateContentModel";
+import type { JsonRecord, SlotSchema } from "./templateContentModel";
 
 export type TemplateCatalogSlot = {
   slot_code: string;
@@ -9,7 +9,11 @@ export type TemplateCatalogSlot = {
   required: boolean;
   default_block_name: string;
   sort_order: number;
-  content_fields: ContentField[];
+  content_schema: SlotSchema;
+  presentation_schema: SlotSchema;
+  default_content: JsonRecord;
+  default_presentation: JsonRecord;
+  validation: JsonRecord;
 };
 
 export type TemplateCatalogRegion = {
