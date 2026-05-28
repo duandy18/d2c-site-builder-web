@@ -8,85 +8,15 @@ import type {
   UpdateSlotContentRequest
 } from "../model/templateContentModel";
 
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function objectKeys(value: JsonRecord | undefined): string[] {
-  return Object.keys(value ?? {});
-}
-
-function prettyJson(value: JsonRecord): string {
-  return JSON.stringify(value, null, 2);
-}
-
-function parseJsonObject(rawValue: string, label: string): JsonRecord {
-  const parsed = JSON.parse(rawValue) as unknown;
-
-  if (!isRecord(parsed)) {
-    throw new Error(`${label} 必须是 JSON 对象`);
-  }
-
-  return parsed;
-}
-
-function schemaFields(schema: SlotSchema): Record<string, JsonRecord> {
-  if (!isRecord(schema.fields)) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(schema.fields).filter(([, value]) => isRecord(value))
-  ) as Record<string, JsonRecord>;
-}
-
-function schemaFieldNames(schema: SlotSchema): string[] {
-  return Object.keys(schemaFields(schema));
-}
-
-function isMissingValue(value: unknown): boolean {
-  if (value === null || value === undefined) {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    return value.trim().length === 0;
-  }
-
-  if (Array.isArray(value)) {
-    return value.length === 0;
-  }
-
-  if (isRecord(value)) {
-    return Object.keys(value).length === 0;
-  }
-
-  return false;
-}
-
-function validateRequiredContent(slot: PageContentSlot, content: JsonRecord): void {
-  const fields = schemaFields(slot.content_schema);
-
-  for (const [fieldKey, schema] of Object.entries(fields)) {
-    if (schema.required !== true) {
-      continue;
-    }
-
-    if (isMissingValue(content[fieldKey])) {
-      throw new Error(`请填写：${fieldKey}`);
-    }
-  }
-}
-
-function schemaSummary(schema: SlotSchema): string {
-  const fieldNames = schemaFieldNames(schema);
-
-  if (fieldNames.length === 0) {
-    return "无字段";
-  }
-
-  return fieldNames.join(" / ");
-}
+import { SchemaDrivenForm } from "./schemaForm/SchemaDrivenForm";
+import {
+  buildDraftValues,
+  normalizeDraftValues,
+  objectKeys,
+  prettyJson,
+  schemaSummary,
+  validateRequiredValues
+} from "./schemaForm/schemaFormModel";
 
 function JsonReadonlyBlock({ title, value }: { title: string; value: JsonRecord }) {
   return (
@@ -97,12 +27,11 @@ function JsonReadonlyBlock({ title, value }: { title: string; value: JsonRecord 
   );
 }
 
-function SchemaBlock({ title, schema }: { title: string; schema: SlotSchema }) {
+function SchemaSummaryBlock({ title, schema }: { title: string; schema: SlotSchema }) {
   return (
-    <div className="sb-schema-block">
+    <div className="sb-schema-summary-block">
       <span>{title}</span>
       <strong>{schemaSummary(schema)}</strong>
-      <pre>{prettyJson(schema)}</pre>
     </div>
   );
 }
@@ -129,15 +58,17 @@ export function SlotContentForm({
     objectKeys(slot.content).length > 0 || objectKeys(slot.presentation).length > 0;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [contentText, setContentText] = useState(() => prettyJson(initialContent));
-  const [presentationText, setPresentationText] = useState(() =>
-    prettyJson(initialPresentation)
+  const [contentDraft, setContentDraft] = useState<JsonRecord>(() =>
+    buildDraftValues(slot.content_schema, initialContent)
+  );
+  const [presentationDraft, setPresentationDraft] = useState<JsonRecord>(() =>
+    buildDraftValues(slot.presentation_schema, initialPresentation)
   );
   const [error, setError] = useState<string | null>(null);
 
   function resetValues() {
-    setContentText(prettyJson(initialContent));
-    setPresentationText(prettyJson(initialPresentation));
+    setContentDraft(buildDraftValues(slot.content_schema, initialContent));
+    setPresentationDraft(buildDraftValues(slot.presentation_schema, initialPresentation));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -145,10 +76,15 @@ export function SlotContentForm({
     setError(null);
 
     try {
-      const content = parseJsonObject(contentText, "内容 JSON");
-      const presentation = parseJsonObject(presentationText, "表现 JSON");
+      const content = normalizeDraftValues("内容", slot.content_schema, contentDraft);
+      const presentation = normalizeDraftValues(
+        "表现",
+        slot.presentation_schema,
+        presentationDraft
+      );
 
-      validateRequiredContent(slot, content);
+      validateRequiredValues("内容", slot.content_schema, content);
+      validateRequiredValues("表现", slot.presentation_schema, presentation);
 
       await onSubmit(slot.slot_code, { content, presentation });
       setIsEditing(false);
@@ -162,8 +98,8 @@ export function SlotContentForm({
     return (
       <div className="sb-slot-view">
         <div className="sb-slot-schema-grid">
-          <SchemaBlock title="内容 Schema" schema={slot.content_schema} />
-          <SchemaBlock title="表现 Schema" schema={slot.presentation_schema} />
+          <SchemaSummaryBlock title="内容字段" schema={slot.content_schema} />
+          <SchemaSummaryBlock title="表现字段" schema={slot.presentation_schema} />
         </div>
 
         <div className="sb-slot-schema-grid">
@@ -184,23 +120,23 @@ export function SlotContentForm({
     <form className="sb-slot-form" onSubmit={handleSubmit}>
       {error ? <div className="sb-form-error">{error}</div> : null}
 
-      <label>
-        <span>内容 JSON</span>
-        <textarea
-          value={contentText}
-          disabled={disabled}
-          onChange={(event) => setContentText(event.target.value)}
-        />
-      </label>
+      <SchemaDrivenForm
+        title="内容表单"
+        schema={slot.content_schema}
+        value={contentDraft}
+        disabled={disabled}
+        emptyText="该 Slot 没有可编辑内容字段。"
+        onChange={setContentDraft}
+      />
 
-      <label>
-        <span>表现 JSON</span>
-        <textarea
-          value={presentationText}
-          disabled={disabled}
-          onChange={(event) => setPresentationText(event.target.value)}
-        />
-      </label>
+      <SchemaDrivenForm
+        title="表现配置"
+        schema={slot.presentation_schema}
+        value={presentationDraft}
+        disabled={disabled}
+        emptyText="该 Slot 暂无表现配置字段，模板会使用默认表现。"
+        onChange={setPresentationDraft}
+      />
 
       <div className="sb-slot-actions">
         <button type="submit" disabled={disabled}>

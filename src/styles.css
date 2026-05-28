@@ -618,6 +618,28 @@ a {
   overflow-wrap: anywhere;
 }
 
+
+.sb-schema-summary-block {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.sb-schema-summary-block span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.sb-schema-summary-block strong {
+  color: #0f172a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .sb-preview-page {
   display: grid;
   gap: 18px;
@@ -888,3 +910,126 @@ a {
   padding: 12px;
   white-space: pre-wrap;
 }
+
+
+/* schema-driven form start */
+.sb-schema-form-panel {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.sb-schema-form-panel + .sb-schema-form-panel {
+  margin-top: 16px;
+}
+
+.sb-schema-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sb-schema-form-header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #e5e7eb;
+}
+
+.sb-schema-form-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.sb-schema-form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.sb-schema-field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.sb-schema-field-label small {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sb-required-mark {
+  margin-left: 4px;
+  color: #f97316;
+  font-style: normal;
+}
+
+.sb-schema-input,
+.sb-schema-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.42);
+  color: #f8fafc;
+  font: inherit;
+  outline: none;
+}
+
+.sb-schema-input {
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.sb-schema-textarea {
+  min-height: 132px;
+  padding: 12px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.sb-schema-textarea-compact {
+  min-height: 86px;
+  font-family: inherit;
+}
+
+.sb-schema-input:focus,
+.sb-schema-textarea:focus {
+  border-color: rgba(56, 189, 248, 0.75);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.13);
+}
+
+.sb-schema-checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cbd5e1;
+}
+
+.sb-schema-image-field {
+  display: grid;
+  gap: 8px;
+}
+
+.sb-schema-help,
+.sb-empty-schema-note {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sb-empty-schema-note {
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 14px;
+  padding: 12px;
+}
+/* schema-driven form end */
+
