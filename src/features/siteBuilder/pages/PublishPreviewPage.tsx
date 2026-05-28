@@ -4,8 +4,7 @@ import { fetchRuntimePageContract } from "../api/runtimeContractApi";
 import type {
   JsonRecord,
   RuntimeBlockContract,
-  RuntimePageContractResponse,
-  RuntimeRegionContract
+  RuntimePageContractResponse
 } from "../model/runtimeContractModel";
 import { PageFrame } from "../../../shared/ui/PageFrame";
 
@@ -21,6 +20,8 @@ type LoadState =
   | { status: "loading"; page: PreviewPageOption }
   | { status: "ok"; page: PreviewPageOption; contract: RuntimePageContractResponse }
   | { status: "error"; page: PreviewPageOption; error: string };
+
+type BlockMap = Record<string, RuntimeBlockContract | undefined>;
 
 const DEFAULT_PREVIEW_PAGE: PreviewPageOption = {
   routePageCode: "home",
@@ -56,11 +57,96 @@ function asRecordArray(value: unknown): JsonRecord[] {
     : [];
 }
 
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : "";
+function asText(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return "";
 }
 
-function statusText(block: RuntimeBlockContract): string {
+function imageUrl(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  const record = asRecord(value);
+  const directUrl = asText(record.url).trim();
+
+  if (directUrl.length > 0) {
+    return directUrl;
+  }
+
+  if (record.image !== undefined) {
+    return imageUrl(record.image);
+  }
+
+  return "";
+}
+
+function imageAlt(value: unknown, fallback: string): string {
+  const record = asRecord(value);
+  return asText(record.alt).trim() || fallback;
+}
+
+function blockText(
+  block: RuntimeBlockContract | undefined,
+  fieldKey: string,
+  fallback: string
+): string {
+  const value = block?.content[fieldKey];
+  const text = asText(value).trim();
+
+  return text.length > 0 ? text : fallback;
+}
+
+function blockRecords(block: RuntimeBlockContract | undefined, fieldKey: string): JsonRecord[] {
+  return asRecordArray(block?.content[fieldKey]);
+}
+
+function blockTextList(block: RuntimeBlockContract | undefined, fieldKey: string): string[] {
+  const value = block?.content[fieldKey];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (isRecord(item)) {
+        return asText(item.label) || asText(item.title) || asText(item.name);
+      }
+
+      return asText(item);
+    })
+    .filter((item) => item.trim().length > 0);
+}
+
+function listLabel(item: JsonRecord, fallback: string): string {
+  return asText(item.label) || asText(item.title) || asText(item.name) || fallback;
+}
+
+function buildBlockMap(contract: RuntimePageContractResponse): BlockMap {
+  const result: BlockMap = {};
+
+  for (const region of contract.regions) {
+    for (const block of region.blocks) {
+      result[block.slot_code] = block;
+    }
+  }
+
+  return result;
+}
+
+function allBlocks(contract: RuntimePageContractResponse): RuntimeBlockContract[] {
+  return contract.regions.flatMap((region) => region.blocks);
+}
+
+function blockStatusText(block: RuntimeBlockContract): string {
   if (block.status === "active" && block.is_filled) {
     return "已填写";
   }
@@ -72,339 +158,543 @@ function statusText(block: RuntimeBlockContract): string {
   return "未填写";
 }
 
-function imageUrl(value: unknown): string {
-  const image = asRecord(value);
-  return asString(image.url);
-}
-
-function imageAlt(value: unknown, fallback: string): string {
-  const image = asRecord(value);
-  return asString(image.alt) || fallback;
-}
-
-function renderSimpleTitle(block: RuntimeBlockContract) {
+function renderCartIcon() {
   return (
-    <div className="sb-preview-title-block">
-      <p>{asString(block.content.kicker)}</p>
-      <h2>{asString(block.content.title) || "首页标题未填写"}</h2>
-    </div>
+    <svg viewBox="0 0 32 32" role="presentation" aria-hidden="true">
+      <path
+        className="sb-runtime-cart-body"
+        d="M6.3 7.4h2.1c.8 0 1.5.6 1.7 1.4l.3 1.3h14.9c.8 0 1.4.8 1.2 1.6l-1.8 7.1c-.3 1.2-1.4 2.1-2.7 2.1H13c-1.3 0-2.4-.9-2.7-2.2L8.7 10.4 8.3 9H6.3c-.5 0-.9-.4-.9-.8s.4-.8.9-.8Z"
+      />
+      <path
+        className="sb-runtime-cart-cut"
+        d="M13.2 13.4h9.7l-.9 3.6h-8.1l-.7-3.6Z"
+      />
+      <circle className="sb-runtime-cart-wheel" cx="14.2" cy="24.3" r="1.8" />
+      <circle className="sb-runtime-cart-wheel" cx="22.4" cy="24.3" r="1.8" />
+    </svg>
   );
 }
 
-function renderCampaignBanner(block: RuntimeBlockContract) {
-  return (
-    <div className="sb-preview-banner">
-      <span>{asString(block.content.label) || "广告位"}</span>
-      <h2>{asString(block.content.title) || "广告标题未填写"}</h2>
-      <p>{asString(block.content.subtitle)}</p>
-    </div>
-  );
+function RuntimeEmptyMedia({ label }: { label: string }) {
+  return <div className="sb-runtime-empty-media">{label}</div>;
 }
 
-function renderCollectionTabs(block: RuntimeBlockContract) {
-  const items = asRecordArray(block.content.items);
+function PreviewReadinessPanel({ contract }: { contract: RuntimePageContractResponse }) {
+  const blocks = allBlocks(contract);
+  const requiredBlocks = blocks.filter((block) => block.required);
+  const filledBlocks = blocks.filter((block) => block.is_filled);
+  const missingRequiredBlocks = requiredBlocks.filter((block) => !block.is_filled);
 
   return (
-    <div className="sb-preview-collection-tabs">
-      {items.length > 0 ? (
-        items.map((item, index) => (
-          <span key={`${block.block_code}:collection:${index}`}>
-            {asString(item.label) || `集合 ${index + 1}`}
-          </span>
-        ))
-      ) : (
-        <span>集合导航未填写</span>
-      )}
-    </div>
-  );
-}
-
-function renderCategoryNav(block: RuntimeBlockContract) {
-  const items = asRecordArray(block.content.items);
-
-  return (
-    <div className="sb-preview-category-nav">
-      {items.length > 0 ? (
-        items.map((item, index) => (
-          <span key={`${block.block_code}:category:${index}`}>
-            {asString(item.label) || `分类 ${index + 1}`}
-          </span>
-        ))
-      ) : (
-        <span>分类导航未填写</span>
-      )}
-    </div>
-  );
-}
-
-function renderServiceBar(block: RuntimeBlockContract) {
-  const items = Array.isArray(block.content.items) ? block.content.items : [];
-
-  return (
-    <div className="sb-preview-service-bar">
-      {items.length > 0 ? (
-        items.map((item, index) => (
-          <span key={`${block.block_code}:service:${index}`}>
-            {asString(item) || `服务 ${index + 1}`}
-          </span>
-        ))
-      ) : (
-        <span>服务承诺未填写</span>
-      )}
-    </div>
-  );
-}
-
-function renderProductGrid(block: RuntimeBlockContract) {
-  const products = asRecordArray(block.content.products);
-
-  if (products.length === 0) {
-    return <div className="sb-preview-block">商品列表未填写</div>;
-  }
-
-  return (
-    <div className="sb-preview-product-grid">
-      {products.map((product, index) => {
-        const title = asString(product.title) || `商品 ${index + 1}`;
-        const mediaUrl = imageUrl(product.image);
-        const salePrice = asString(product.sale_price);
-        const originalPrice = asString(product.original_price);
-
-        return (
-          <div key={`${block.block_code}:product:${index}`} className="sb-preview-product-card">
-            <div className="sb-preview-product-media">
-              {mediaUrl ? <img src={mediaUrl} alt={title} /> : <span>商品图</span>}
-            </div>
-            <strong>{title}</strong>
-            <span>{asString(product.category)}</span>
-            <div className="sb-preview-price">
-              {salePrice || "价格未填"}
-              {originalPrice ? <del>{originalPrice}</del> : null}
-            </div>
-            <span>
-              {asString(product.sold_count)}
-              {asString(product.paid_buyers) ? ` · ${asString(product.paid_buyers)}` : ""}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function renderGalleryMain(block: RuntimeBlockContract) {
-  const mediaUrl = imageUrl(block.content.main_image);
-
-  return (
-    <div className="sb-preview-gallery-main">
-      {mediaUrl ? (
-        <img src={mediaUrl} alt={imageAlt(block.content.main_image, "商品主图")} />
-      ) : (
-        <span>商品主图未填写</span>
-      )}
-    </div>
-  );
-}
-
-function renderThumbs(block: RuntimeBlockContract) {
-  const images = asRecordArray(block.content.images);
-
-  return (
-    <div className="sb-preview-thumbs">
-      {images.length > 0 ? (
-        images.map((item, index) => {
-          const mediaUrl = imageUrl(item.image ?? item);
-
-          return (
-            <div key={`${block.block_code}:thumb:${index}`} className="sb-preview-thumb">
-              {mediaUrl ? <img src={mediaUrl} alt={imageAlt(item, "缩略图")} /> : "缩略图"}
-            </div>
-          );
-        })
-      ) : (
-        <div className="sb-preview-thumb">缩略图未填写</div>
-      )}
-    </div>
-  );
-}
-
-function renderImageMatrixMain(block: RuntimeBlockContract) {
-  const mediaUrl = imageUrl(block.content.main_image);
-
-  return (
-    <div className="sb-preview-image-matrix-main">
-      {mediaUrl ? (
-        <img src={mediaUrl} alt={imageAlt(block.content.main_image, "多图主图")} />
-      ) : (
-        <span>多图主图未填写</span>
-      )}
-    </div>
-  );
-}
-
-function renderProductSummary(block: RuntimeBlockContract) {
-  return (
-    <div className="sb-preview-summary">
-      <span>{asString(block.content.category)}</span>
-      <h2>{asString(block.content.title) || "商品标题未填写"}</h2>
-      <p>{asString(block.content.description)}</p>
-    </div>
-  );
-}
-
-function renderProductPrice(block: RuntimeBlockContract) {
-  return (
-    <div className="sb-preview-price">
-      {asString(block.content.sale_price) || "实际价未填写"}
-      {asString(block.content.original_price) ? (
-        <del>{asString(block.content.original_price)}</del>
-      ) : null}
-    </div>
-  );
-}
-
-function renderPromotion(block: RuntimeBlockContract) {
-  return (
-    <div className="sb-preview-banner">
-      <span>{asString(block.content.badge) || "优惠"}</span>
-      <strong>{asString(block.content.promo) || "优惠信息未填写"}</strong>
-    </div>
-  );
-}
-
-function renderSalesStats(block: RuntimeBlockContract) {
-  return (
-    <p>
-      {asString(block.content.sold_count) || "已售未填写"}
-      {asString(block.content.paid_buyers) ? ` · ${asString(block.content.paid_buyers)}` : ""}
-    </p>
-  );
-}
-
-function renderHighlights(block: RuntimeBlockContract) {
-  const items = Array.isArray(block.content.items) ? block.content.items : [];
-
-  return (
-    <ul className="sb-preview-highlight-list">
-      {items.length > 0 ? (
-        items.map((item, index) => (
-          <li key={`${block.block_code}:highlight:${index}`}>{asString(item)}</li>
-        ))
-      ) : (
-        <li>商品卖点未填写</li>
-      )}
-    </ul>
-  );
-}
-
-function renderDetailCards(block: RuntimeBlockContract) {
-  const cards = asRecordArray(block.content.cards);
-
-  return (
-    <div className="sb-preview-block-list">
-      {cards.length > 0 ? (
-        cards.map((card, index) => (
-          <div key={`${block.block_code}:card:${index}`} className="sb-preview-block">
-            <strong>{asString(card.title) || `详情 ${index + 1}`}</strong>
-            <p>{asString(card.body)}</p>
-          </div>
-        ))
-      ) : (
-        <div className="sb-preview-block">详情说明未填写</div>
-      )}
-    </div>
-  );
-}
-
-function renderRawBlock(block: RuntimeBlockContract) {
-  return (
-    <pre className="sb-preview-raw-block">
-      {JSON.stringify(
-        {
-          content: block.content,
-          presentation: block.presentation
-        },
-        null,
-        2
-      )}
-    </pre>
-  );
-}
-
-function renderBlockBody(block: RuntimeBlockContract) {
-  switch (block.renderer_key) {
-    case "pc_web.simple_title":
-      return renderSimpleTitle(block);
-    case "pc_web.campaign_banner":
-      return renderCampaignBanner(block);
-    case "pc_web.product_collection_tabs":
-      return renderCollectionTabs(block);
-    case "pc_web.product_category_nav":
-      return renderCategoryNav(block);
-    case "pc_web.service_promise_bar":
-      return renderServiceBar(block);
-    case "pc_web.product_grid":
-      return renderProductGrid(block);
-    case "pc_web.product_gallery_main":
-      return renderGalleryMain(block);
-    case "pc_web.product_gallery_thumbs":
-      return renderThumbs(block);
-    case "pc_web.product_image_matrix_main":
-      return renderImageMatrixMain(block);
-    case "pc_web.product_image_matrix_side_images":
-      return renderThumbs(block);
-    case "pc_web.product_summary_info":
-      return renderProductSummary(block);
-    case "pc_web.product_price":
-      return renderProductPrice(block);
-    case "pc_web.product_promotion":
-      return renderPromotion(block);
-    case "pc_web.product_sales_stats":
-      return renderSalesStats(block);
-    case "pc_web.product_highlight_list":
-      return renderHighlights(block);
-    case "pc_web.product_detail_cards":
-      return renderDetailCards(block);
-    default:
-      return renderRawBlock(block);
-  }
-}
-
-function RuntimeBlockPreview({ block }: { block: RuntimeBlockContract }) {
-  return (
-    <div
-      className={
-        block.is_filled ? "sb-preview-block" : "sb-preview-block sb-preview-block-empty"
-      }
-    >
-      <div className="sb-preview-block-toolbar">
-        <span>{block.slot_code}</span>
-        <span>{block.renderer_key}</span>
-        <span>{statusText(block)}</span>
+    <section className="sb-runtime-readiness">
+      <div>
+        <span>Slot 总数</span>
+        <strong>{blocks.length}</strong>
       </div>
-      {renderBlockBody(block)}
-    </div>
+      <div>
+        <span>已填写</span>
+        <strong>{filledBlocks.length}</strong>
+      </div>
+      <div>
+        <span>必填未填</span>
+        <strong>{missingRequiredBlocks.length}</strong>
+      </div>
+      <div>
+        <span>预览状态</span>
+        <strong>{contract.status}</strong>
+      </div>
+    </section>
   );
 }
 
-function RuntimeRegionPreview({ region }: { region: RuntimeRegionContract }) {
+function SlotStatusPanel({ contract }: { contract: RuntimePageContractResponse }) {
   return (
-    <section className="sb-preview-region">
-      <div className="sb-preview-region-header">
+    <section className="sb-card">
+      <div className="sb-section-title-row">
         <div>
-          <h3>{region.region_name}</h3>
-          <p>{region.template_region_code}</p>
+          <div className="sb-kicker">Slot Status</div>
+          <h2>预览检查提示</h2>
+          <p>这里只做前端可读提示，不替代后续发布前校验 API。</p>
         </div>
-        <span className="sb-pill">{region.status}</span>
       </div>
 
-      <div className="sb-preview-block-list">
-        {region.blocks.map((block) => (
-          <RuntimeBlockPreview key={block.block_code} block={block} />
+      <div className="sb-runtime-slot-status-grid">
+        {allBlocks(contract).map((block) => (
+          <div
+            key={block.block_code}
+            className={
+              block.is_filled
+                ? "sb-runtime-slot-status sb-runtime-slot-status-filled"
+                : block.required
+                  ? "sb-runtime-slot-status sb-runtime-slot-status-required"
+                  : "sb-runtime-slot-status"
+            }
+          >
+            <strong>{block.slot_code}</strong>
+            <span>{block.renderer_key}</span>
+            <em>{blockStatusText(block)}</em>
+          </div>
         ))}
       </div>
     </section>
   );
+}
+
+function HomePreview({ contract }: { contract: RuntimePageContractResponse }) {
+  const blocks = buildBlockMap(contract);
+  const brandBlock = blocks["header.brand"];
+  const loginBlock = blocks["header.login_link"];
+  const collectionBlock = blocks["product_collection.tabs"];
+  const heroBlock = blocks["hero.title"];
+  const campaignBlock = blocks["campaign.banner"];
+  const categoryBlock = blocks["product_category.nav"];
+  const cartBlock = blocks["cart.entry"];
+  const productGridBlock = blocks["product_grid.list"];
+  const serviceBlock = blocks["service.promise_bar"];
+  const legalBlock = blocks["site.legal_footer"];
+
+  const collectionItems = blockRecords(collectionBlock, "items");
+  const categoryItems = blockRecords(categoryBlock, "items");
+  const products = blockRecords(productGridBlock, "products");
+  const services = blockTextList(serviceBlock, "items");
+  const cartTarget = blockText(cartBlock, "link_target", "#cart");
+
+  return (
+    <main className="sb-runtime-shop">
+      <header className="sb-runtime-shop-header">
+        <a className="sb-runtime-shop-logo" href="#top">
+          {blockText(brandBlock, "brand_name", "品牌名称未填写")}
+        </a>
+        <a className="sb-runtime-login-link" href={blockText(loginBlock, "link_target", "#login")}>
+          {blockText(loginBlock, "label", "登录")}
+        </a>
+      </header>
+
+      <nav className="sb-runtime-tabs" aria-label="商品集合导航">
+        {collectionItems.length > 0 ? (
+          collectionItems.map((item, index) => (
+            <button
+              className={index === 0 ? "active" : undefined}
+              key={`collection:${index}`}
+              type="button"
+            >
+              {listLabel(item, `集合 ${index + 1}`)}
+            </button>
+          ))
+        ) : (
+          <span>商品集合导航未填写</span>
+        )}
+      </nav>
+
+      <section className="sb-runtime-hero" id="top">
+        <p>{blockText(heroBlock, "kicker", "首页副标题未填写")}</p>
+        <h1>{blockText(heroBlock, "title", "首页标题未填写")}</h1>
+      </section>
+
+      <section className="sb-runtime-ad" id="campaign">
+        <div>
+          <span>{blockText(campaignBlock, "label", "广告位")}</span>
+          <strong>{blockText(campaignBlock, "title", "广告标题未填写")}</strong>
+          <p>{blockText(campaignBlock, "subtitle", "广告说明未填写")}</p>
+        </div>
+        <a href={blockText(campaignBlock, "link_target", "#products")}>去选购</a>
+      </section>
+
+      <div className="sb-runtime-category-bar">
+        <section className="sb-runtime-category-row" id="categories" aria-label="商品分类">
+          {categoryItems.length > 0 ? (
+            categoryItems.map((category, index) => (
+              <button
+                className={index === 0 ? "primary-category active" : undefined}
+                key={`category:${index}`}
+                type="button"
+              >
+                {listLabel(category, `分类 ${index + 1}`)}
+              </button>
+            ))
+          ) : (
+            <span>商品分类导航未填写</span>
+          )}
+        </section>
+        <a className="sb-runtime-category-cart" href={cartTarget} aria-label="进入购物车">
+          {renderCartIcon()}
+        </a>
+      </div>
+
+      <section className="sb-runtime-products" id="products">
+        <div className="sb-runtime-section-title">
+          <h2>{blockText(productGridBlock, "source", "全部商品")}</h2>
+          <span>{products.length > 0 ? `${products.length} 件商品` : "商品列表未填写"}</span>
+        </div>
+
+        {products.length > 0 ? (
+          <div className="sb-runtime-product-grid">
+            {products.map((product, index) => {
+              const title = asText(product.title) || `商品 ${index + 1}`;
+              const mediaUrl = imageUrl(product.image);
+
+              return (
+                <article className="sb-runtime-product-card" key={`product:${index}`}>
+                  <div className="sb-runtime-product-image">
+                    {mediaUrl ? <img alt={title} src={mediaUrl} /> : <RuntimeEmptyMedia label="商品图未填写" />}
+                    <span>{asText(product.badge) || asText(product.category) || "商品"}</span>
+                  </div>
+
+                  <div className="sb-runtime-product-body">
+                    <p>{asText(product.category) || "分类未填写"}</p>
+                    <h3>{title}</h3>
+
+                    <div className="sb-runtime-buy-row">
+                      <div className="sb-runtime-price-row">
+                        <strong>{asText(product.sale_price) || "价格未填"}</strong>
+                        {asText(product.original_price) ? <span>{asText(product.original_price)}</span> : null}
+                      </div>
+
+                      <label className="sb-runtime-quantity-select">
+                        <span>数量</span>
+                        <select defaultValue="1">
+                          {[1, 2, 3, 4, 5].map((quantity) => (
+                            <option key={quantity} value={quantity}>
+                              {quantity}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="sb-runtime-promo">{asText(product.promo) || "优惠信息未填写"}</div>
+
+                    <div className="sb-runtime-product-stats">
+                      <span>已售 {asText(product.sold_count) || "未填写"}</span>
+                      <span>{asText(product.paid_buyers) || "未填写"} 人已付款</span>
+                    </div>
+
+                    <button type="button">加入购物车</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="sb-runtime-empty-state">商品列表未填写。请在首页搭建的商品列表 Slot 中补充 products。</div>
+        )}
+      </section>
+
+      {services.length > 0 ? (
+        <section className="sb-runtime-services">
+          {services.map((service) => (
+            <span key={service}>{service}</span>
+          ))}
+        </section>
+      ) : null}
+
+      <footer className="sb-runtime-footer">
+        <span>{blockText(legalBlock, "copyright_text", "版权信息未填写")}</span>
+        <span>{blockText(legalBlock, "icp_record_number", "ICP备案号待填写")}</span>
+        <span>{blockText(legalBlock, "police_record_number", "公安备案号待填写")}</span>
+      </footer>
+    </main>
+  );
+}
+
+function collectImageUrls(
+  mainBlock: RuntimeBlockContract | undefined,
+  imageBlock: RuntimeBlockContract | undefined
+): string[] {
+  const urls = [
+    imageUrl(mainBlock?.content.main_image),
+    ...blockRecords(imageBlock, "images").map((item) => imageUrl(item))
+  ].filter((url) => url.length > 0);
+
+  return [...new Set(urls)];
+}
+
+function GalleryViewer({
+  mainBlock,
+  imageBlock,
+  variant
+}: {
+  mainBlock: RuntimeBlockContract | undefined;
+  imageBlock: RuntimeBlockContract | undefined;
+  variant: "gallery" | "matrix";
+}) {
+  const images = collectImageUrls(mainBlock, imageBlock);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const activeImage = images[activeImageIndex] ?? images[0] ?? "";
+
+  if (variant === "matrix") {
+    return (
+      <div className="sb-runtime-image-matrix-viewer">
+        <figure className="sb-runtime-image-matrix-main">
+          {activeImage ? (
+            <img alt="商品主图" src={activeImage} />
+          ) : (
+            <RuntimeEmptyMedia label="多图主图未填写" />
+          )}
+          <figcaption>{activeImage ? imageCaption(activeImageIndex) : "主图"}</figcaption>
+        </figure>
+
+        <div className="sb-runtime-image-matrix-thumbs" aria-label="商品多角度图片">
+          {images.length > 0 ? (
+            images.slice(0, 6).map((image, index) => (
+              <button
+                className={activeImageIndex === index ? "active" : undefined}
+                key={`${image}:${index}`}
+                onClick={() => setActiveImageIndex(index)}
+                type="button"
+              >
+                <img alt={`商品多角度图 ${index + 1}`} src={image} />
+                <span>{imageCaption(index)}</span>
+              </button>
+            ))
+          ) : (
+            <div className="sb-runtime-empty-state">多角度图片未填写，建议 6 张，最少 4 张。</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sb-runtime-gallery">
+      <div className="sb-runtime-main-image">
+        {activeImage ? (
+          <img alt={imageAlt(mainBlock?.content.main_image, "商品主图")} src={activeImage} />
+        ) : (
+          <RuntimeEmptyMedia label="商品主图未填写" />
+        )}
+      </div>
+
+      <div className="sb-runtime-thumb-row">
+        {images.length > 0 ? (
+          images.map((image, index) => (
+            <button
+              className={activeImageIndex === index ? "active" : undefined}
+              key={`${image}:${index}`}
+              onClick={() => setActiveImageIndex(index)}
+              type="button"
+            >
+              <img alt={`商品详情图 ${index + 1}`} src={image} />
+            </button>
+          ))
+        ) : (
+          <div className="sb-runtime-empty-state">缩略图未填写。</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function imageCaption(index: number): string {
+  const captions = ["主图", "场景", "细节", "包装", "搭配", "参考"];
+  return captions[index] ?? `图片 ${index + 1}`;
+}
+
+function ProductSummaryPanel({
+  blocks,
+  compact
+}: {
+  blocks: BlockMap;
+  compact: boolean;
+}) {
+  const summaryBlock = blocks["product.summary.info"];
+  const priceBlock = blocks["product.price"];
+  const promotionBlock = blocks["product.promotion"];
+  const salesBlock = blocks["product.sales_stats"];
+  const highlightsBlock = blocks["product.highlights"];
+  const cartActionBlock = blocks["product.cart_action"];
+  const highlightItems = blockTextList(highlightsBlock, "items");
+  const title = blockText(summaryBlock, "title", "商品标题未填写");
+
+  return (
+    <aside className={compact ? "sb-runtime-image-matrix-info" : "sb-runtime-product-summary"}>
+      <p className="sb-runtime-kicker">{blockText(summaryBlock, "category", "分类未填写")}</p>
+      {compact ? <h3>{title}</h3> : <h1>{title}</h1>}
+      <p className="sb-runtime-description">
+        {blockText(summaryBlock, "description", "商品描述未填写")}
+      </p>
+
+      <div className={compact ? "sb-runtime-compact-price-row" : "sb-runtime-detail-price-row"}>
+        <strong>{blockText(priceBlock, "sale_price", "实际价未填写")}</strong>
+        <span>{blockText(priceBlock, "original_price", "原价未填写")}</span>
+      </div>
+
+      <div className={compact ? "sb-runtime-compact-promo-row" : "sb-runtime-promo-row"}>
+        {blockText(promotionBlock, "badge", "").trim().length > 0 ? (
+          <span>{blockText(promotionBlock, "badge", "优惠")}</span>
+        ) : null}
+        <strong>{blockText(promotionBlock, "promo", "优惠信息未填写")}</strong>
+      </div>
+
+      <div className="sb-runtime-sales-row">
+        <span>已售 {blockText(salesBlock, "sold_count", "未填写")}</span>
+        <span>{blockText(salesBlock, "paid_buyers", "未填写")} 人已付款</span>
+      </div>
+
+      <div className={compact ? "sb-runtime-compact-highlight-row" : "sb-runtime-highlight-list"}>
+        {highlightItems.length > 0 ? (
+          highlightItems.map((highlight) => <span key={highlight}>{highlight}</span>)
+        ) : (
+          <span>商品卖点未填写</span>
+        )}
+      </div>
+
+      <div className={compact ? "sb-runtime-compact-action-row" : "sb-runtime-detail-action-row"}>
+        <label>
+          数量
+          <select defaultValue="1">
+            {[1, 2, 3, 4, 5].map((quantity) => (
+              <option key={quantity} value={quantity}>
+                {quantity}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button type="button">{blockText(cartActionBlock, "label", "加入购物车")}</button>
+      </div>
+    </aside>
+  );
+}
+
+function detailCards(block: RuntimeBlockContract | undefined): JsonRecord[] {
+  return blockRecords(block, "cards");
+}
+
+function DetailCardsSection({
+  block,
+  title
+}: {
+  block: RuntimeBlockContract | undefined;
+  title: string;
+}) {
+  const cards = detailCards(block);
+
+  return (
+    <section className="sb-runtime-detail-content">
+      <h2>{title}</h2>
+      {cards.length > 0 ? (
+        <div className="sb-runtime-detail-cards">
+          {cards.map((card, index) => (
+            <article key={`detail-card:${index}`}>
+              <strong>{asText(card.title) || `详情 ${index + 1}`}</strong>
+              <p>{asText(card.body) || asText(card.description) || "详情说明未填写"}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="sb-runtime-empty-state">详情说明未填写。</div>
+      )}
+    </section>
+  );
+}
+
+function RecommendSection({ block }: { block: RuntimeBlockContract | undefined }) {
+  const products = blockRecords(block, "products");
+  const source = blockText(block, "source", "相关推荐");
+
+  return (
+    <section className="sb-runtime-recommend">
+      <div className="sb-runtime-section-title">
+        <h2>相关推荐</h2>
+        <span>{source}</span>
+      </div>
+
+      {products.length > 0 ? (
+        <div className="sb-runtime-recommend-grid">
+          {products.map((product, index) => {
+            const title = asText(product.title) || `推荐商品 ${index + 1}`;
+            const mediaUrl = imageUrl(product.image);
+
+            return (
+              <article key={`recommend:${index}`}>
+                {mediaUrl ? <img alt={title} src={mediaUrl} /> : <RuntimeEmptyMedia label="推荐商品图" />}
+                <strong>{title}</strong>
+                <div>
+                  <span>{asText(product.sale_price) || "价格未填"}</span>
+                  {asText(product.original_price) ? <del>{asText(product.original_price)}</del> : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="sb-runtime-empty-state">相关推荐未填写，后续可接商品推荐来源。</div>
+      )}
+    </section>
+  );
+}
+
+function ProductGalleryPreview({ contract }: { contract: RuntimePageContractResponse }) {
+  const blocks = buildBlockMap(contract);
+
+  return (
+    <main className="sb-runtime-detail-page">
+      <header className="sb-runtime-detail-header">
+        <a className="sb-runtime-shop-logo" href="#top">Paw Home</a>
+        <span>商品详情模板 A · 标准图册</span>
+      </header>
+
+      <section className="sb-runtime-detail-layout" id="top">
+        <GalleryViewer
+          mainBlock={blocks["product.gallery.main"]}
+          imageBlock={blocks["product.gallery.thumbs"]}
+          variant="gallery"
+        />
+        <ProductSummaryPanel blocks={blocks} compact={false} />
+      </section>
+
+      <DetailCardsSection block={blocks["product.detail_content.cards"]} title="商品详情" />
+      <RecommendSection block={blocks["product.recommend_shelf"]} />
+    </main>
+  );
+}
+
+function ProductImageMatrixPreview({ contract }: { contract: RuntimePageContractResponse }) {
+  const blocks = buildBlockMap(contract);
+
+  return (
+    <main className="sb-runtime-detail-page">
+      <header className="sb-runtime-detail-header">
+        <a className="sb-runtime-shop-logo" href="#top">Paw Home</a>
+        <span>商品详情模板 B · 多图展示</span>
+      </header>
+
+      <section className="sb-runtime-image-matrix-section" id="top">
+        <div className="sb-runtime-section-title">
+          <h2>多图商品详情模板</h2>
+          <span>点击周围图片切换主图</span>
+        </div>
+
+        <article className="sb-runtime-image-matrix-card">
+          <GalleryViewer
+            mainBlock={blocks["product.image_matrix.main"]}
+            imageBlock={blocks["product.image_matrix.side_images"]}
+            variant="matrix"
+          />
+          <ProductSummaryPanel blocks={blocks} compact />
+        </article>
+      </section>
+
+      <DetailCardsSection block={blocks["product.detail_content.cards"]} title="图文说明" />
+    </main>
+  );
+}
+
+function RuntimeContractPreview({ contract }: { contract: RuntimePageContractResponse }) {
+  if (contract.page_code === "home") {
+    return <HomePreview contract={contract} />;
+  }
+
+  if (contract.page_code === "product_detail_gallery") {
+    return <ProductGalleryPreview contract={contract} />;
+  }
+
+  if (contract.page_code === "product_detail_image_matrix") {
+    return <ProductImageMatrixPreview contract={contract} />;
+  }
+
+  return <div className="sb-runtime-empty-state">暂不支持该页面模板预览：{contract.page_code}</div>;
 }
 
 export function PublishPreviewPage({ page }: SiteBuilderPageProps) {
@@ -450,11 +740,8 @@ export function PublishPreviewPage({ page }: SiteBuilderPageProps) {
       ? state.contract
       : null;
 
-  const sortedRegions = useMemo(
-    () =>
-      currentContract
-        ? [...currentContract.regions].sort((a, b) => a.sort_order - b.sort_order)
-        : [],
+  const currentReadiness = useMemo(
+    () => (currentContract ? <PreviewReadinessPanel contract={currentContract} /> : null),
     [currentContract]
   );
 
@@ -512,13 +799,14 @@ export function PublishPreviewPage({ page }: SiteBuilderPageProps) {
                 <span>page={currentContract.page_code}</span>
                 <span>contract={currentContract.contract_version}</span>
               </div>
+              {currentReadiness}
             </section>
 
-            <section className="sb-preview-canvas">
-              {sortedRegions.map((region) => (
-                <RuntimeRegionPreview key={region.region_code} region={region} />
-              ))}
+            <section className="sb-runtime-preview-stage">
+              <RuntimeContractPreview contract={currentContract} />
             </section>
+
+            <SlotStatusPanel contract={currentContract} />
           </>
         ) : null}
       </div>
