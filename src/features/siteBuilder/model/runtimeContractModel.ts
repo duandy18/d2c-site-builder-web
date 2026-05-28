@@ -34,6 +34,6 @@ export type RuntimePageContractResponse = {
   page_title: string;
   template_key: string;
   template_name: string;
-  status: "draft_preview";
+  status: "draft_preview" | "published";
   regions: RuntimeRegionContract[];
 };
