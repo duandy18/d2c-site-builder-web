@@ -1,7 +1,7 @@
 import type {
-  JsonRecord,
   PageContentFormResponse,
-  SlotContentResponse
+  SlotContentResponse,
+  UpdateSlotContentRequest
 } from "../model/templateContentModel";
 
 import {
@@ -21,7 +21,7 @@ export function fetchPcHomeContentForm(): Promise<PageContentFormResponse> {
 
 export function updatePcHomeSlotContent(
   slotCode: string,
-  content: JsonRecord
+  request: UpdateSlotContentRequest
 ): Promise<SlotContentResponse> {
-  return updateTemplateSlotContent(PC_HOME_TARGET, slotCode, content);
+  return updateTemplateSlotContent(PC_HOME_TARGET, slotCode, request);
 }

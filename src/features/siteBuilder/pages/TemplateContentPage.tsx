@@ -7,9 +7,9 @@ import {
   updateTemplateSlotContent
 } from "../api/templateContentApi";
 import type {
-  JsonRecord,
   PageContentFormResponse,
-  TemplateContentTarget
+  TemplateContentTarget,
+  UpdateSlotContentRequest
 } from "../model/templateContentModel";
 import { PageFrame } from "../../../shared/ui/PageFrame";
 
@@ -75,12 +75,12 @@ export function TemplateContentPage({ page }: SiteBuilderPageProps) {
     };
   }, [target]);
 
-  async function handleSaveSlot(slotCode: string, content: JsonRecord) {
+  async function handleSaveSlot(slotCode: string, request: UpdateSlotContentRequest) {
     setIsSubmitting(true);
     setNotice(null);
 
     try {
-      await updateTemplateSlotContent(target, slotCode, content);
+      await updateTemplateSlotContent(target, slotCode, request);
       await loadContentForm();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "保存失败";
@@ -94,7 +94,7 @@ export function TemplateContentPage({ page }: SiteBuilderPageProps) {
   return (
     <PageFrame
       title={page.title}
-      description="按前端模板填写页面内容。区域、顺序、字体、布局和响应式由模板负责。"
+      description="按模板 Slot 填写内容和表现配置。区域、顺序、字体、布局和响应式由模板负责。"
     >
       {notice ? (
         <section

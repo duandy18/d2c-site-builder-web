@@ -34,7 +34,7 @@ export function SiteBuilderHomePage({ page }: SiteBuilderPageProps) {
   return (
     <PageFrame
       title={page.title}
-      description="Site Builder 是 D2C 内部购物网站搭建控制台，页面目录由后端注册驱动。"
+      description="Site Builder 是 D2C 内部购物网站搭建控制台，页面目录和模板目录由后端注册驱动。"
     >
       {error ? <section className="sb-card sb-error">服务状态加载失败：{error}</section> : null}
       <HealthCard health={health} />
@@ -42,9 +42,9 @@ export function SiteBuilderHomePage({ page }: SiteBuilderPageProps) {
       <section className="sb-card">
         <h2>当前阶段</h2>
         <ul>
-          <li>后端页面注册与动态导航</li>
-          <li>PC Web 页面体系规划</li>
-          <li>首页搭建入口</li>
+          <li>模板 owner 已迁入数据库</li>
+          <li>PC Web 当前保留首页、商品详情页 A、商品详情页 B</li>
+          <li>内容填写采用 content + presentation 合同</li>
         </ul>
       </section>
     </PageFrame>

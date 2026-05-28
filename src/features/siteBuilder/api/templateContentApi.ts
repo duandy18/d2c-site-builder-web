@@ -1,7 +1,6 @@
 import { siteBuilderGet, siteBuilderPatch } from "../../../shared/api/siteBuilderClient";
 
 import type {
-  JsonRecord,
   PageContentFormResponse,
   SlotContentResponse,
   TemplateContentTarget,
@@ -44,10 +43,10 @@ export function fetchTemplateContentForm(
 export function updateTemplateSlotContent(
   target: TemplateContentTarget,
   slotCode: string,
-  content: JsonRecord
+  request: UpdateSlotContentRequest
 ): Promise<SlotContentResponse> {
   return siteBuilderPatch<SlotContentResponse, UpdateSlotContentRequest>(
     `${templateContentBase(target)}/contents/${encodeURIComponent(slotCode)}`,
-    { content }
+    request
   );
 }

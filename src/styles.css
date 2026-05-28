@@ -575,3 +575,45 @@ a {
   font-weight: 900;
   gap: 8px;
 }
+
+.sb-slot-schema-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.sb-json-preview,
+.sb-schema-block {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.sb-json-preview span,
+.sb-schema-block span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.sb-json-preview pre,
+.sb-schema-block pre {
+  background: #0f172a;
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 12px;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.sb-schema-block strong {
+  color: #0f172a;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
