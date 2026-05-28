@@ -617,3 +617,274 @@ a {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+
+.sb-preview-page {
+  display: grid;
+  gap: 18px;
+}
+
+.sb-preview-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sb-preview-tab {
+  background: #f8fafc;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  color: #334155;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-weight: 900;
+  gap: 4px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.sb-preview-tab small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sb-preview-tab-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.sb-preview-tab-active small {
+  color: #cbd5e1;
+}
+
+.sb-preview-contract-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sb-preview-contract-meta span {
+  background: #f1f5f9;
+  border-radius: 999px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+
+.sb-preview-canvas {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.sb-preview-region {
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.sb-preview-region-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.sb-preview-region-header h3,
+.sb-preview-region-header p {
+  margin-top: 0;
+}
+
+.sb-preview-region-header p {
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.sb-preview-block-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sb-preview-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.sb-preview-block-empty {
+  opacity: 0.72;
+}
+
+.sb-preview-block-toolbar {
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 900;
+  gap: 8px;
+}
+
+.sb-preview-block-toolbar span {
+  background: #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.sb-preview-title-block h2 {
+  font-size: 34px;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.sb-preview-title-block p {
+  color: #64748b;
+  margin: 0;
+}
+
+.sb-preview-banner {
+  background: #0f172a;
+  border-radius: 16px;
+  color: #ffffff;
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+}
+
+.sb-preview-banner span {
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.sb-preview-category-nav,
+.sb-preview-collection-tabs,
+.sb-preview-service-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sb-preview-category-nav span,
+.sb-preview-collection-tabs span,
+.sb-preview-service-bar span {
+  background: #e2e8f0;
+  border-radius: 999px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.sb-preview-product-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.sb-preview-product-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.sb-preview-product-media,
+.sb-preview-gallery-main,
+.sb-preview-image-matrix-main {
+  align-items: center;
+  background: #e2e8f0;
+  border-radius: 14px;
+  color: #64748b;
+  display: flex;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 160px;
+  overflow: hidden;
+}
+
+.sb-preview-product-media img,
+.sb-preview-gallery-main img,
+.sb-preview-image-matrix-main img,
+.sb-preview-thumb img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.sb-preview-price {
+  color: #dc2626;
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.sb-preview-price del {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.sb-preview-gallery,
+.sb-preview-image-matrix {
+  display: grid;
+  gap: 12px;
+}
+
+.sb-preview-thumbs,
+.sb-preview-side-images {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+
+.sb-preview-thumb {
+  align-items: center;
+  background: #e2e8f0;
+  border-radius: 12px;
+  color: #64748b;
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 80px;
+  overflow: hidden;
+}
+
+.sb-preview-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.sb-preview-summary h2 {
+  margin-bottom: 4px;
+}
+
+.sb-preview-highlight-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.sb-preview-raw-block {
+  background: #0f172a;
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 12px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
