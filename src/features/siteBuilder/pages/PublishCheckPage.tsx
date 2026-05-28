@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { publishPageSnapshot } from "../api/publishActionApi";
 import { fetchPublishReadiness } from "../api/publishReadinessApi";
+import type { PublishPageResponse } from "../model/publishActionModel";
 import type {
   PublishReadinessIssue,
   PublishReadinessRegion,
@@ -22,6 +24,12 @@ type LoadState =
   | { status: "loading"; page: PublishCheckPageOption }
   | { status: "ok"; page: PublishCheckPageOption; readiness: PublishReadinessResponse }
   | { status: "error"; page: PublishCheckPageOption; error: string };
+
+type PublishActionState =
+  | { status: "idle" }
+  | { status: "publishing" }
+  | { status: "success"; result: PublishPageResponse }
+  | { status: "error"; error: string };
 
 const DEFAULT_CHECK_PAGE: PublishCheckPageOption = {
   routePageCode: "home",
@@ -69,6 +77,18 @@ function issuesForSlot(
   slotCode: string
 ): PublishReadinessIssue[] {
   return issues.filter((issue) => issue.slot_code === slotCode);
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("zh-CN", {
+    hour12: false
+  });
 }
 
 function IssueList({
@@ -172,6 +192,76 @@ function SummaryGrid({ readiness }: { readiness: PublishReadinessResponse }) {
   );
 }
 
+function PublishActionPanel({
+  readiness,
+  selectedPage,
+  publishState,
+  onPublish
+}: {
+  readiness: PublishReadinessResponse;
+  selectedPage: PublishCheckPageOption;
+  publishState: PublishActionState;
+  onPublish: () => void;
+}) {
+  const isPublishing = publishState.status === "publishing";
+  const canPublish = readiness.ready && !isPublishing;
+
+  return (
+    <section className="sb-card">
+      <div className="sb-section-title-row">
+        <div>
+          <div className="sb-kicker">Publish Action</div>
+          <h2>执行发布</h2>
+          <p>
+            发布会把当前草稿生成不可变 published runtime snapshot。顾客端后续只读取
+            published，不读取 draft preview。
+          </p>
+        </div>
+        <button
+          className="sb-primary-action-button"
+          type="button"
+          onClick={onPublish}
+          disabled={!canPublish}
+        >
+          {isPublishing ? "发布中..." : "执行发布"}
+        </button>
+      </div>
+
+      {!readiness.ready ? (
+        <div className="sb-publish-action-note sb-publish-action-note-blocked">
+          当前 {selectedPage.label} 仍有阻塞项，不能发布。请先处理上方错误。
+        </div>
+      ) : null}
+
+      {readiness.ready ? (
+        <div className="sb-publish-action-note sb-publish-action-note-ready">
+          当前 {selectedPage.label} 已通过发布检查，可以生成 published snapshot。
+        </div>
+      ) : null}
+
+      {publishState.status === "error" ? (
+        <div className="sb-publish-action-result sb-publish-action-result-error">
+          <strong>发布失败</strong>
+          <span>{publishState.error}</span>
+        </div>
+      ) : null}
+
+      {publishState.status === "success" ? (
+        <div className="sb-publish-action-result sb-publish-action-result-success">
+          <strong>发布成功</strong>
+          <div>
+            <span>页面：{publishState.result.page_code}</span>
+            <span>版本：v{publishState.result.publish_version}</span>
+            <span>合同：{publishState.result.contract_version}</span>
+            <span>发布人：{publishState.result.published_by}</span>
+            <span>发布时间：{formatDateTime(publishState.result.published_at)}</span>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function SlotRow({
   slot,
   issues
@@ -239,9 +329,15 @@ function RegionPanel({
 }
 
 function PublishReadinessResult({
-  readiness
+  readiness,
+  selectedPage,
+  publishState,
+  onPublish
 }: {
   readiness: PublishReadinessResponse;
+  selectedPage: PublishCheckPageOption;
+  publishState: PublishActionState;
+  onPublish: () => void;
 }) {
   const errorIssues = readiness.issues.filter((issue) => issue.level === "error");
   const warningIssues = readiness.issues.filter((issue) => issue.level === "warning");
@@ -250,6 +346,13 @@ function PublishReadinessResult({
     <>
       <SummaryCard readiness={readiness} />
       <SummaryGrid readiness={readiness} />
+
+      <PublishActionPanel
+        readiness={readiness}
+        selectedPage={selectedPage}
+        publishState={publishState}
+        onPublish={onPublish}
+      />
 
       <section className="sb-card">
         <div className="sb-section-title-row">
@@ -293,6 +396,9 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
     status: "loading",
     page: DEFAULT_CHECK_PAGE
   });
+  const [publishState, setPublishState] = useState<PublishActionState>({
+    status: "idle"
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -321,6 +427,7 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
 
   function selectCheckPage(option: PublishCheckPageOption) {
     setSelectedPage(option);
+    setPublishState({ status: "idle" });
     setState({ status: "loading", page: option });
   }
 
@@ -337,6 +444,27 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
       );
   }
 
+  function handlePublish() {
+    setPublishState({ status: "publishing" });
+
+    publishPageSnapshot(selectedPage.routePageCode, {
+      published_by: "site-builder-web"
+    })
+      .then((result) => {
+        setPublishState({ status: "success", result });
+        return fetchPublishReadiness(selectedPage.routePageCode);
+      })
+      .then((readiness) => {
+        setState({ status: "ok", page: selectedPage, readiness });
+      })
+      .catch((err: unknown) => {
+        setPublishState({
+          status: "error",
+          error: err instanceof Error ? err.message : "发布失败"
+        });
+      });
+  }
+
   const currentReadiness = useMemo(
     () =>
       state.status === "ok" && state.page.routePageCode === selectedPage.routePageCode
@@ -348,7 +476,7 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
   return (
     <PageFrame
       title={page.title}
-      description="检查页面草稿是否满足发布条件。这里只做只读检查，不执行发布。"
+      description="检查页面草稿是否满足发布条件。通过检查后，可生成 published runtime snapshot。"
     >
       <div className="sb-readiness-page">
         <section className="sb-card">
@@ -362,7 +490,7 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
               className="sb-primary-action-button"
               type="button"
               onClick={reloadCurrentPage}
-              disabled={state.status === "loading"}
+              disabled={state.status === "loading" || publishState.status === "publishing"}
             >
               重新检查
             </button>
@@ -397,7 +525,14 @@ export function PublishCheckPage({ page }: SiteBuilderPageProps) {
           </section>
         ) : null}
 
-        {currentReadiness ? <PublishReadinessResult readiness={currentReadiness} /> : null}
+        {currentReadiness ? (
+          <PublishReadinessResult
+            readiness={currentReadiness}
+            selectedPage={selectedPage}
+            publishState={publishState}
+            onPublish={handlePublish}
+          />
+        ) : null}
       </div>
     </PageFrame>
   );

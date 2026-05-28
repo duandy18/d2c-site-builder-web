@@ -50,3 +50,13 @@ export function siteBuilderPatch<TResponse, TBody extends object>(
     body: JSON.stringify(body)
   });
 }
+
+export function siteBuilderPost<TResponse, TBody extends object>(
+  path: string,
+  body: TBody
+): Promise<TResponse> {
+  return siteBuilderRequest<TResponse>(path, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+}
